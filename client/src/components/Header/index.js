@@ -1,155 +1,80 @@
-import React, { Component } from 'react';
+import React from 'react';
+import Helmet from 'react-helmet';
 import PropTypes from 'prop-types';
-import { connect } from 'react-redux';
-import { bindActionCreators } from 'redux';
-import { createSelector } from 'reselect';
-import Media from 'react-media';
-import FCCSearch from 'react-freecodecamp-search';
 
-import NavLogo from './components/NavLogo';
-import UserState from './components/UserState';
-import { Link } from '../helpers';
+import stripeObserver from './stripeIframesFix';
+import UniversalNav from './components/UniversalNav';
 
 import './header.css';
 
-import {
-  toggleDisplaySideNav,
-  toggleDisplayMenu,
-  displayMenuSelector
-} from '../layouts/components/guide/redux';
-
-const mapStateToProps = createSelector(
-  displayMenuSelector,
-  displayMenu => ({
-    displayMenu
-  })
-);
-
-const mapDispatchToProps = dispatch =>
-  bindActionCreators({ toggleDisplaySideNav, toggleDisplayMenu }, dispatch);
-
 const propTypes = {
-  disableSettings: PropTypes.bool,
-  displayMenu: PropTypes.bool,
-  onGuide: PropTypes.bool,
-  toggleDisplayMenu: PropTypes.func,
-  toggleDisplaySideNav: PropTypes.func
+  fetchState: PropTypes.shape({ pending: PropTypes.bool }),
+  user: PropTypes.object
 };
 
-class Header extends Component {
+export class Header extends React.Component {
   constructor(props) {
     super(props);
+    this.state = {
+      displayMenu: false
+    };
     this.menuButtonRef = React.createRef();
+    this.searchBarRef = React.createRef();
+    this.handleClickOutside = this.handleClickOutside.bind(this);
+    this.toggleDisplayMenu = this.toggleDisplayMenu.bind(this);
   }
 
   componentDidMount() {
     document.addEventListener('click', this.handleClickOutside);
+
+    // Remove stacking Stripe iframes with each navigation
+    // after visiting /donate
+    stripeObserver();
   }
 
   componentWillUnmount() {
     document.removeEventListener('click', this.handleClickOutside);
   }
 
-  toggleDisplayMenuLogic = () => {
-    if (this.props.onGuide) {
-      this.props.toggleDisplaySideNav();
-    } else {
-      this.props.toggleDisplayMenu();
-    }
-  };
-
-  handleClickOutside = event => {
+  handleClickOutside(event) {
     if (
-      this.props.displayMenu &&
+      this.state.displayMenu &&
+      this.menuButtonRef.current &&
       !this.menuButtonRef.current.contains(event.target) &&
-      !this.props.onGuide
+      this.searchBarRef.current &&
+      !this.searchBarRef.current.contains(event.target)
     ) {
-      this.toggleDisplayMenuLogic();
+      this.toggleDisplayMenu();
     }
-  };
+  }
 
-  handleMediaChange = matches => {
-    if (!matches && this.props.displayMenu) {
-      this.toggleDisplayMenuLogic();
-    }
-  };
-
-  renderClassNames = (displayMenu, onGuide) => {
-    if (displayMenu && onGuide) {
-      return 'opened onGuide';
-    } else if (displayMenu) {
-      return 'opened';
-    } else if (onGuide) {
-      return 'onGuide';
-    }
-    return '';
-  };
-
+  toggleDisplayMenu() {
+    this.setState(({ displayMenu }) => ({ displayMenu: !displayMenu }));
+  }
   render() {
-    const {
-      disableSettings,
-      onGuide,
-      displayMenu,
-      toggleDisplayMenu
-    } = this.props;
+    const { displayMenu } = this.state;
+    const { fetchState, user } = this.props;
     return (
-      <header className={this.renderClassNames(displayMenu, onGuide)}>
-        <nav id='top-nav'>
-          <Link className='home-link' to='/'>
-            <NavLogo />
-          </Link>
-          {disableSettings ? null : <FCCSearch />}
-          <Media query='(max-width: 991px)'>
-            {matches =>
-              matches && onGuide && displayMenu ? null : (
-                <ul id='top-right-nav'>
-                  <li onClick={toggleDisplayMenu}>
-                    <Link to='/learn'>Learn</Link>
-                  </li>
-                  <li onClick={toggleDisplayMenu}>
-                    <Link external={true} to='/forum'>
-                      Forum
-                    </Link>
-                  </li>
-                  <li onClick={toggleDisplayMenu}>
-                    <Link external={true} to='/news'>
-                      News
-                    </Link>
-                  </li>
-                  <li className='user-state-link' onClick={toggleDisplayMenu}>
-                    <UserState disableSettings={disableSettings} />
-                  </li>
-                </ul>
-              )
-            }
-          </Media>
-          <span
-            className='menu-button'
-            onClick={this.toggleDisplayMenuLogic}
-            ref={this.menuButtonRef}
-          >
-            Menu
-          </span>
-          {onGuide ? (
-            <Media
-              onChange={this.handleMediaChange}
-              query='(max-width: 991px)'
-            />
-          ) : (
-            <Media
-              onChange={this.handleMediaChange}
-              query='(max-width: 734px)'
-            />
-          )}
-        </nav>
-      </header>
+      <>
+        <Helmet>
+          <style>{':root{--header-height: 38px}'}</style>
+        </Helmet>
+        <header>
+          <UniversalNav
+            displayMenu={displayMenu}
+            fetchState={fetchState}
+            menuButtonRef={this.menuButtonRef}
+            searchBarRef={this.searchBarRef}
+            toggleDisplayMenu={this.toggleDisplayMenu}
+            user={user}
+          />
+        </header>
+      </>
     );
   }
 }
 
 Header.propTypes = propTypes;
+Header.displayName = 'Header';
 
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(Header);
+export default Header;

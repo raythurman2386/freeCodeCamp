@@ -1,28 +1,23 @@
 import React, { Fragment } from 'react';
 import PropTypes from 'prop-types';
 
+import PrismFormatted from './PrismFormatted';
 import './challenge-description.css';
 
 const propTypes = {
+  block: PropTypes.string,
   description: PropTypes.string,
-  instructions: PropTypes.string,
-  section: PropTypes.string
+  instructions: PropTypes.string
 };
 
-function emptyInstruction(instructions) {
-  return /^<section\s+id\s*=\s*("|')instructions\1\s*>\s*<\/section>$/.test(
-    instructions
-  );
-}
-
-function ChallengeDescription({ description, instructions, section }) {
+function ChallengeDescription({ description, instructions, block }) {
   return (
-    <div className={`challenge-instructions ${section}`}>
-      <div dangerouslySetInnerHTML={{ __html: description }} />
-      {!emptyInstruction(instructions) && (
+    <div className={`challenge-instructions${block ? ' ' + block : ''}`}>
+      {description && <PrismFormatted text={description} />}
+      {instructions && (
         <Fragment>
           <hr />
-          <div dangerouslySetInnerHTML={{ __html: instructions }} />
+          <PrismFormatted text={instructions} />
         </Fragment>
       )}
       <hr />
